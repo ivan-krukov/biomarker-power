@@ -112,7 +112,7 @@ ggplot(df, aes(t, y)) +
 
 ## Multiple testing correction
 
-- Benjamini-Hotchberg False discovery rate
+- Benjamini-Hochberg False discovery rate
   - Controls for the false positives in the entire experiment
   - Less stringent than Bonferonni correction
 
