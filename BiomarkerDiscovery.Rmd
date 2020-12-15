@@ -90,12 +90,14 @@ estimates <- tibble(
   group = c('Placebo', 'Treatment'), 
   base = c(fe[1], fe[1]),
   eff = c(fe[2], fe[3]))
+df$pred <- predict(model, random.only = T)
 
 ggplot(df, aes(t, y)) + 
   geom_line(aes(group = id)) + 
+  geom_line(aes(y = pred, group = id), linetype='dashed') +
   geom_abline(
     aes(slope = eff, intercept = base, group = group), 
-  data = estimates, color = 'blue') +
+  data = estimates, color = 'blue', size = 1.5) +
   facet_wrap(~ group) +
   labs(x = "Time, days", y = "Effect, SD")
 ```
@@ -124,10 +126,10 @@ critical_point <- participant_power %>%
 
 participant_power %>%
   ggplot(aes(x = participants)) + 
-  geom_ribbon(aes(ymin = pmax(0, mean - sd), ymax = pmin(1, mean + sd)), fill = 'gray') +
+  geom_ribbon(aes(ymin = pmax(0, mean - sd), ymax = pmin(1, mean + sd)), fill = 'gray90') +
   geom_line(aes(y = mean)) +
   geom_hline(yintercept = 0.9, color = 'blue', linetype = 'dashed') +
-  geom_text(y = 0.85, x = critical_point, label = paste0(">", critical_point), color = 'black') +
+  geom_text(y = 0.85, x = critical_point, label = paste0(">", critical_point), color = 'black', size = 5) +
   labs(x = "Number of participants", y = "Power")
 ```
 
@@ -141,10 +143,10 @@ critical_point <- day_power %>%
 
 day_power %>%
   ggplot(aes(x = days)) + 
-  geom_ribbon(aes(ymin = pmax(0, mean - sd), ymax = pmin(1, mean + sd)), fill = 'gray') +
+  geom_ribbon(aes(ymin = pmax(0, mean - sd), ymax = pmin(1, mean + sd)), fill = 'gray90') +
   geom_line(aes(y = mean)) +
   geom_hline(yintercept = 0.9, color = 'blue', linetype = 'dashed') +
-  geom_text(y = 0.85, x = critical_point, label = paste0(">", critical_point), color = 'black') +
+  geom_text(y = 0.85, x = critical_point, label = paste0(">", critical_point), color = 'black', size = 5) +
   labs(x = "Days of follow-up", y = "Power")
 ```
 

@@ -2,4 +2,10 @@
 
 This is a presentation of an approach for a biomarker discovery pipeline using linear mixed effects models.
 
-The main document is [BiomarkerDiscovery.Rmd](BiomarkerDiscovery.Rmd)
+## Presentation
+- presentation slides: [BiomarkerDiscovery.pdf](BiomarkerDiscovery.pdf)
+- main document: [BiomarkerDiscovery.Rmd](BiomarkerDiscovery.Rmd)
+
+## Scripts
+- Power simulation script used to generate the tables: [power_sim.R](power_sim.R)
+- Simulation model for the experiment: [simulations.R](simulations.R)
