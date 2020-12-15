@@ -21,8 +21,8 @@ ggplot2::theme_set(theme_minimal(base_size = 18))
 
 - Treatment and placebo groups
 - 10 patients each
-- Baseline, then 5 days follow-up
-- 4000 biomarkers measured
+- Baseline, then 5 days of follow-up
+- 4000 biomarkers measured each day
 
 ## Potential approaches
 
@@ -35,6 +35,8 @@ ggplot2::theme_set(theme_minimal(base_size = 18))
 - Machine learning
   - Performant, but hard to interpret
   
+# Analysis pipeline
+  
 ## Data pre-processing
 
 - Log-transformation
@@ -46,16 +48,17 @@ ggplot2::theme_set(theme_minimal(base_size = 18))
 ## Simulated dataset
 
 ```{r sim_data, echo = F}
-set.seed(10)
+set.seed(100)
 param <- list(eps_sd = .5, base = 0,
                 trt = list(eff = .1, base_sd = 1, eff_sd = .025),
                 plc = list(eff = 0,  base_sd = 1, eff_sd = 0))
 
 df <- sim_experiment(10, 10, 5, param)
-ggplot(df, aes(t, y)) + 
+df_plot <- ggplot(df, aes(t, y)) + 
   geom_line(aes(group = id)) + 
   facet_wrap(~ group) +
   labs(x = "Time, days", y = "Effect, SD")
+df_plot
 ```
 
 ## Mixed-effects model
@@ -79,10 +82,10 @@ coeff_table <- summary(model)$coefficients %>%
   rownames_to_column("Fixed effect") %>%
   rename(`p value` = `Pr(>|t|)`)
 
-coeff_table %>% knitr::kable(caption = "Inferblue effects")
+coeff_table %>% knitr::kable(caption = "Inferred effects")
 ```
 
-## Inference
+## Inference results
 
 ```{r, echo=F}
 fe <- fixef(model)
@@ -90,11 +93,16 @@ estimates <- tibble(
   group = c('Placebo', 'Treatment'), 
   base = c(fe[1], fe[1]),
   eff = c(fe[2], fe[3]))
-df$pred <- predict(model, random.only = T)
+df$pred <- predict(model)
+df_plot
+```
 
+## Inference results
+
+```{r, echo=F}
 ggplot(df, aes(t, y)) + 
   geom_line(aes(group = id)) + 
-  geom_line(aes(y = pred, group = id), linetype='dashed') +
+  geom_line(aes(y = pred, group = id), linetype = 'dashed') +
   geom_abline(
     aes(slope = eff, intercept = base, group = group), 
   data = estimates, color = 'blue', size = 1.5) +
@@ -108,13 +116,13 @@ ggplot(df, aes(t, y)) +
   - Controls for the false positives in the entire experiment
   - Less stringent than Bonferonni correction
 
-# Power
+# Improving the design
 
 ## Power of the test
 
-- Can we detect an effect if it actually exists?
-- How many days of follow-up do we need?
+- More data!
 - How many patients do we need per group?
+- How many days of follow-up do we need?
 
 ## Participant number
 
@@ -150,7 +158,10 @@ day_power %>%
   labs(x = "Days of follow-up", y = "Power")
 ```
 
-## Further directions
+## Further considerations
+
+- Is the sample truly representative?
+- Does the effect increase indefinitively with time?
 
 - Smaller placebo group - 20 participant may be sufficient
 - Effect of the drug concentration
@@ -166,3 +177,11 @@ Code available at:
 - With treatment, biomarker level changes 0.05 SD per day
  - 2% improvement per day
  - 93rd percentile after 30 days of treatment
+
+```{r}
+param <- list(
+  eps_sd = .5, base = 0,
+  trt = list(eff = .05, base_sd = 1, eff_sd = .025),
+  plc = list(eff = 0,  base_sd = 1, eff_sd = 0))
+```
+
