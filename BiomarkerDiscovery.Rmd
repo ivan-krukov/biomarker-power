@@ -1,0 +1,166 @@
+---
+title: "Biomarker prioritization and power analysis"
+author: "Ivan Krukov"
+date: "December 15, 2020"
+output:
+  beamer_presentation: 
+      theme: "Pittsburgh"
+      fonttheme: "structurebold"
+  ioslides_presentation: default
+---
+
+```{r setup, include=FALSE}
+library(lme4)
+library(lmerTest)
+library(tidyverse)
+source("simulations.R")
+ggplot2::theme_set(theme_minimal(base_size = 18))
+```
+
+## Problem statement
+
+- Treatment and placebo groups
+- 10 patients each
+- Baseline, then 5 days follow-up
+- 4000 biomarkers measured
+
+## Potential approaches
+
+- Repeated measures ANOVA
+  - Appropriate, but no effect indication
+- Linear mixed model
+  - Effect size inference, significance testing
+- Bayesian linear model
+  - Appropriate with limited data, but priors are hard to choose
+- Machine learning
+  - Performant, but hard to interpret
+  
+## Data pre-processing
+
+- Log-transformation
+  - Necessary if biomarker varies over degrees of magnitude
+- Z-score standardization
+  - 0-centered 
+  - Units of standard deviations
+
+## Simulated dataset
+
+```{r sim_data, echo = F}
+set.seed(10)
+param <- list(eps_sd = .5, base = 0,
+                trt = list(eff = .1, base_sd = 1, eff_sd = .025),
+                plc = list(eff = 0,  base_sd = 1, eff_sd = 0))
+
+df <- sim_experiment(10, 10, 5, param)
+ggplot(df, aes(t, y)) + 
+  geom_line(aes(group = id)) + 
+  facet_wrap(~ group) +
+  labs(x = "Time, days", y = "Effect, SD")
+```
+
+## Mixed-effects model
+
+- Fixed effects
+  - On average, baseline is zero (standardized)
+  - Biomarker activity increases over time (only with treatment)
+
+- Random effects
+  - Baseline is different for each patient
+  - Individual response to drug is different
+  
+## Inference
+
+```{r, message=F, echo=F}
+model <- lmer(y ~ t:group + (t | id), data = df)
+
+coeff_table <- summary(model)$coefficients %>% 
+  as.data.frame() %>% 
+  round(3) %>% 
+  rownames_to_column("Fixed effect") %>%
+  rename(`p value` = `Pr(>|t|)`)
+
+coeff_table %>% knitr::kable(caption = "Inferblue effects")
+```
+
+## Inference
+
+```{r, echo=F}
+fe <- fixef(model)
+estimates <- tibble(
+  group = c('Placebo', 'Treatment'), 
+  base = c(fe[1], fe[1]),
+  eff = c(fe[2], fe[3]))
+
+ggplot(df, aes(t, y)) + 
+  geom_line(aes(group = id)) + 
+  geom_abline(
+    aes(slope = eff, intercept = base, group = group), 
+  data = estimates, color = 'blue') +
+  facet_wrap(~ group) +
+  labs(x = "Time, days", y = "Effect, SD")
+```
+
+## Multiple testing correction
+
+- Benjamini-Hotchberg False discovery rate
+  - Controls for the false positives in the entire experiment
+  - Less stringent than Bonferonni correction
+
+# Power
+
+## Power of the test
+
+- Can we detect an effect if it actually exists?
+- How many days of follow-up do we need?
+- How many patients do we need per group?
+
+## Participant number
+
+```{r, echo=F, message=F}
+participant_power <- read_csv('cached/participant_power.csv')
+critical_point <- participant_power %>% 
+  filter(mean > 0.9) %>% 
+  pull(participants) %>% .[1]
+
+participant_power %>%
+  ggplot(aes(x = participants)) + 
+  geom_ribbon(aes(ymin = pmax(0, mean - sd), ymax = pmin(1, mean + sd)), fill = 'gray') +
+  geom_line(aes(y = mean)) +
+  geom_hline(yintercept = 0.9, color = 'blue', linetype = 'dashed') +
+  geom_text(y = 0.85, x = critical_point, label = paste0(">", critical_point), color = 'black') +
+  labs(x = "Number of participants", y = "Power")
+```
+
+## Days of follow-up
+
+```{r, echo=F, message=F}
+day_power <- read_csv('cached/day_power.csv')
+critical_point <- day_power %>% 
+  filter(mean > 0.9) %>% 
+  pull(days) %>% .[1]
+
+day_power %>%
+  ggplot(aes(x = days)) + 
+  geom_ribbon(aes(ymin = pmax(0, mean - sd), ymax = pmin(1, mean + sd)), fill = 'gray') +
+  geom_line(aes(y = mean)) +
+  geom_hline(yintercept = 0.9, color = 'blue', linetype = 'dashed') +
+  geom_text(y = 0.85, x = critical_point, label = paste0(">", critical_point), color = 'black') +
+  labs(x = "Days of follow-up", y = "Power")
+```
+
+## Further directions
+
+- Smaller placebo group - 20 participant may be sufficient
+- Effect of the drug concentration
+
+Code available at:
+
+[github.com/ivan-krukov/biomarker-power](https://github.com/ivan-krukov/biomarker-power)
+
+# Questions?
+
+## Assumptions about effect
+
+- With treatment, biomarker level changes 0.05 SD per day
+ - 2% improvement per day
+ - 93rd percentile after 30 days of treatment
