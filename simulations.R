@@ -1,3 +1,6 @@
+library(lme4)
+library(lmerTest)
+library(tidyverse)
 
 sim_panel <- function(group_name, n_patients, patient_offset, days, fe, re_sd, eps_sd) {
   #' Simulate a patient panel
